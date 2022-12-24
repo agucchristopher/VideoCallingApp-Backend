@@ -22,7 +22,7 @@ const CONNECTION_URL = process.env.CONNECTION_URL;
 //   .connect(CONNECTION_URL, { useNewUrlParser: true, useUnifiedTopology: true })
 //   .then(() => console.log("Connected to database!"))
 //   .catch((error) => console.log(`${error} did not connect`));
-// mongoose.set("useFindAndModify", false);
+// // mongoose.set("useFindAndModify", false);
 // ngrok.connect(process.env.PORT).then((url) => {
 //   console.log(`Server forwarded to public url ${url}`);
 // });
