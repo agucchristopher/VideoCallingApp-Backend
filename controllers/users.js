@@ -2,11 +2,26 @@ import express from "express";
 import mongoose from "mongoose";
 import twilio from "twilio";
 import User from "../models/User.js";
+import { checkSignup } from "../helpers/index.js";
 export const signup = async (req, res) => {
   const { username, first_name, last_name, password, country, gender, email } =
     req.body;
+  // if (
+  //   username == "" ||
+  //   first_name == "" ||
+  //   last_name == "" ||
+  //   password == "" ||
+  //   country == "" ||
+  //   gender == "" ||
+  //   email == ""
+  // ) {
+  //   res.status(401).json({
+  //     status: "error",
+  //     message: "Required Field Are Missing!",
+  //   });
+  // }
   let profilePic;
-  if (gender == "Male") {
+  if (gender == "male") {
     profilePic = "link to male avatar";
   } else {
     profilePic = "link to Female avatar";
@@ -23,6 +38,7 @@ export const signup = async (req, res) => {
   });
 
   try {
+    // console.log(newUser);
     await newUser.save();
     res.status(201).json({ status: "success", newUser, message: "Created" });
   } catch (error) {
