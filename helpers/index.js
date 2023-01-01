@@ -18,3 +18,7 @@ export const checkSignup = (req, res, next) => {
     next();
   }
 };
+export const generateotpcode = () => {
+  let token = Math.floor(Math.random() * 10000);
+  return token;
+};

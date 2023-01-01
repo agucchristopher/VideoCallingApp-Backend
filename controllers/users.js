@@ -2,105 +2,217 @@ import express from "express";
 import mongoose from "mongoose";
 import twilio from "twilio";
 import User from "../models/User.js";
-import { checkSignup } from "../helpers/index.js";
+import bcrypt from "bcrypt";
+import verifyEmail from "../models/VerifyEmail.js";
+import { generateotpcode } from "../helpers/index.js";
+import Confirmotp from "../models/Confirmotp.js";
+
+// Signup
 export const signup = async (req, res) => {
-  const { username, first_name, last_name, password, country, gender, email } =
+  let { username, first_name, last_name, password, country, gender, email } =
     req.body;
-  // if (
-  //   username == "" ||
-  //   first_name == "" ||
-  //   last_name == "" ||
-  //   password == "" ||
-  //   country == "" ||
-  //   gender == "" ||
-  //   email == ""
-  // ) {
-  //   res.status(401).json({
-  //     status: "error",
-  //     message: "Required Field Are Missing!",
-  //   });
-  // }
+  const userhash = await bcrypt.hash(password, 8);
+
+  password = userhash;
   let profilePic;
   if (gender == "male") {
     profilePic = "link to male avatar";
   } else {
     profilePic = "link to Female avatar";
   }
+  let token = generateotpcode();
+  console.log(token);
+  const tokenhash = await bcrypt.hash(`${token}`, 8);
+
+  token = tokenhash;
+  console.log(token);
   const newUser = new User({
     username,
     first_name,
     last_name,
-    password,
     country,
     gender,
     email,
     profilePic,
+    password,
   });
-
+  const verifyToken = new verifyEmail({ owner: newUser._id, token });
   try {
-    // console.log(newUser);
+    const emailexists = await User.findOne({ email });
+    if (emailexists) {
+      throw Error("Email already in use");
+    }
+    const usernameexists = await User.findOne({ username });
+    if (usernameexists) {
+      throw Error("Username already in use");
+    }
     await newUser.save();
+    await verifyToken.save();
     res.status(201).json({ status: "success", newUser, message: "Created" });
   } catch (error) {
     res.status(409).json({ message: error.message });
   }
   res.end();
 };
+// Verify User
+export const verifyUser = async (req, res) => {
+  const { token, id, email } = req.body;
+  const _id = id;
+  try {
+    const userexists = await User.findOne({ _id });
+    if (!userexists) {
+      throw Error("invalid user");
+    }
+    const usertoken = await verifyEmail.findOne({ owner: id });
 
-export const signin = (req, res) => {
-  const { username, email, password } = req.body;
-  if (username == "de") {
-    res.status(404).json({
-      status: "error",
-      maessage: "User doesn't Exists",
-      username,
-      email,
-    });
-  }
-  if (username == "exists") {
-    res.status(201).json({
-      status: "success",
-      maessage: "User Exists",
-      username,
-      email,
-    });
-    // res.end();
-  }
-};
-
-export const updatepassword = (req, res) => {
-  res.status(200).json({
-    status: "success",
-  });
-};
-
-export const confirmotp = (req, res) => {
-  const { otp, uotp } = req.body;
-  if (!otp && !uotp) {
-    res.status(400).json({
-      status: "error",
-      message: "Required fields are empty",
-    });
-  }
-  if (otp !== uotp) {
-    res.status(400).json({
-      status: "error",
-      message: "Otp do not match",
-    });
-  }
-  if (otp == uotp) {
+    const correct = await bcrypt.compare(token, `${usertoken.token}`);
+    if (!correct) {
+      throw Error("invalid token");
+    }
+    const verify = verifyEmail.findOneAndDelete({ owner: id });
+    const user = User.findOneAndUpdate({ id });
+    user.update({ verified: "true" });
+    await verify;
+    await user;
     res.status(200).json({
       status: "success",
-      message: "confirmed",
+      message: "User have been verified succesfully",
+    });
+  } catch (error) {
+    res.status(401).json({
+      status: "error",
+      message: error.message,
     });
   }
 };
 
-export const test = (req, res) => {
-  console.log(req.body);
-  const body = req.body;
-  res.status(200).json({
-    status: "success",
-    body,
-  });
+// Signin
+export const signin = async (req, res) => {
+  const { username, email, password } = req.body;
+  const user = await User.findOne({ username });
+
+  try {
+    if (!user) {
+      const uemail = await User.findOne({ email });
+      if (!uemail) {
+        throw Error("invalid user");
+      }
+    }
+    if (user) {
+      const userpassword = user.password;
+      const iscorrectpassword = await bcrypt.compare(password, userpassword);
+      if (!iscorrectpassword) {
+        throw Error("Incorrect Password");
+      }
+    }
+    res.status(200).json({
+      status: "success",
+      maessage: "Logged In Sucessfully",
+      user: JSON.stringify(user),
+    });
+  } catch (error) {
+    res.status(401).json({
+      status: "error",
+      maessage: error.message,
+    });
+  }
+};
+// Generate OTP
+export const generateotp = async (req, res) => {
+  const { id } = req.body;
+  const _id = id;
+  try {
+    const resettoken = await Confirmotp.findOneAndDelete({ owner: _id });
+    if (resettoken) {
+    }
+    let otp = generateotpcode();
+    console.log(otp);
+    const hash = await bcrypt.hash(`${otp}`, 8);
+    otp = hash;
+    const userexists = await User.findOne({ _id });
+    if (!userexists) {
+      throw Error("invalid user");
+    }
+    const reset = new Confirmotp({ owner: id, token: `${otp}` });
+    await reset.save();
+    res.status(200).json({
+      status: "success",
+      message: "We Sent You A Code at test@gmail.com",
+    });
+  } catch (error) {
+    res.status(400).json({ status: "error", message: error.message });
+  }
+
+  // }
+};
+// Confirm OTP
+export const confirmotp = async (req, res) => {
+  try {
+    const { token, id } = req.body;
+    const _id = id;
+    const usertoken = await User.findOne({ _id });
+    if (!usertoken) {
+      throw Error("Invalid User");
+    }
+    const resettoken = await Confirmotp.findOne({ owner: _id });
+    if (!resettoken) {
+      throw Error("Invalid Token");
+    }
+    let utoken = `${resettoken.token}`;
+    utoken.trim();
+    token.trim();
+    const correct = await bcrypt.compare(`${token}`, `${utoken}`);
+    console.log(`${token}`, `${utoken}`);
+    if (!correct) {
+      throw Error("Token does not match");
+    } else {
+      const deletetoken = Confirmotp.findOneAndDelete({ owner: _id });
+      await deletetoken;
+      res.status(200).json({
+        status: "success",
+        message: "Token have been confirmed",
+      });
+    }
+  } catch (error) {
+    res.status(401).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+};
+// Update Password
+export const updatePassword = async (req, res) => {
+  let { id, password } = req.body;
+  const _id = id;
+  const rawpass = password;
+  const passwordhash = await bcrypt.hash(password, 8);
+  password = passwordhash;
+  try {
+    const userexists = await User.findOne({ _id });
+    if (!userexists) {
+      throw Error("invalid user");
+    }
+    const usertoken = await Confirmotp.findOne({ owner: _id });
+    if (usertoken) {
+      throw Error("Invalid Request");
+    }
+    const exists = await bcrypt.compare(rawpass, `${userexists.password}`);
+    console.warn("exists", exists, usertoken);
+    if (exists) {
+      throw Error("Your New Password Must be different from the old one");
+    }
+
+    const user = User.findOneAndUpdate({ _id });
+    user.update({ password: password });
+    await user;
+    res.status(200).json({
+      status: "success",
+      message: "User password have been updated succesfully",
+    });
+  } catch (error) {
+    res.status(401).json({
+      status: "error",
+      message: error.message,
+    });
+  }
 };

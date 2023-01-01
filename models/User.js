@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+import bcrypt from "bcrypt";
+
 const userSchema = mongoose.Schema({
   username: String,
   first_name: String,
@@ -13,6 +15,10 @@ const userSchema = mongoose.Schema({
     default: new Date(),
   },
   profilePic: String,
+  verified: {
+    type: String,
+    default: false,
+  },
 });
 
 var User = mongoose.model("User", userSchema);

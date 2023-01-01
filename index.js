@@ -18,14 +18,18 @@ app.use("/twilio", twilio);
 app.listen(PORT, () => {
   console.log(`Server Running on port ${PORT}`);
 });
-const CONNECTION_URL =
-  "mongodb+srv://agucchristopher:agu123@memories-app.ryucxb9.mongodb.net/?retryWrites=true&w=majority";
-
-const client = mongoose
-  .connect(CONNECTION_URL, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("Connected to database!"))
-  .catch((error) => console.log(`${error} did not connect`));
-// mongoose.set("strictQuery", false);
+const CONNECTION_URL = "mongodb://localhost:27017";
+const client = mongoose.connect(
+  "mongodb://127.0.0.1:27017/vcapp",
+  {
+    // dbName: "yourDB-name",
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  },
+  (err) =>
+    err ? console.log(err.message) : console.log("Connected to database")
+);
+mongoose.set("strictQuery", true);
 // ngrok.connect(process.env.PORT).then((url) => {
 //   console.log(`Server forwarded to public url ${url}`);
 // });
