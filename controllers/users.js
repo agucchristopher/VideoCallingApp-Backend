@@ -48,9 +48,15 @@ export const signup = async (req, res) => {
     }
     await newUser.save();
     await verifyToken.save();
-    res.status(201).json({ status: "success", newUser, message: "Created" });
+    res.status(201).json({
+      status: "success",
+      user: newUser,
+      message: "Signup Successful!",
+    });
   } catch (error) {
-    res.status(409).json({ message: error.message });
+    if (error) {
+      res.status(409).json({ message: error.message });
+    }
   }
   res.end();
 };
@@ -64,7 +70,9 @@ export const verifyUser = async (req, res) => {
       throw Error("invalid user");
     }
     const usertoken = await verifyEmail.findOne({ owner: id });
-
+    if (!usertoken) {
+      throw Error("User have already been verified!");
+    }
     const correct = await bcrypt.compare(token, `${usertoken.token}`);
     if (!correct) {
       throw Error("invalid token");
@@ -88,6 +96,7 @@ export const verifyUser = async (req, res) => {
 
 // Signin
 export const signin = async (req, res) => {
+  console.log("Signin" + req.body.username);
   const { username, email, password } = req.body;
   const user = await User.findOne({ username });
 
@@ -146,7 +155,7 @@ export const generateotp = async (req, res) => {
   // }
 };
 // Confirm OTP
-export const confirmotp = async (req, res) => {
+export const verifyotp = async (req, res) => {
   try {
     const { token, id } = req.body;
     const _id = id;

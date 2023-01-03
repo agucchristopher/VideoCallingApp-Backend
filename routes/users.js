@@ -2,16 +2,17 @@ import express from "express";
 import {
   signup,
   signin,
-  confirmotp,
+  verifyotp,
   verifyUser,
   generateotp,
   updatePassword,
 } from "../controllers/users.js";
+import { checkSignup } from "../helpers/index.js";
 
 const users = express.Router();
-users.post("/signup", signup);
+users.post("/signup", checkSignup, signup);
 users.post("/signin", signin);
-users.post("/confirmotp", confirmotp);
+users.post("/verifyotp", verifyotp);
 users.patch("/updatepassword", updatePassword);
 users.post("/verify-user", verifyUser);
 users.post("/generateotp", generateotp);
