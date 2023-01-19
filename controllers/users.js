@@ -6,7 +6,7 @@ import bcrypt from "bcrypt";
 import verifyEmail from "../models/VerifyEmail.js";
 import { generateotpcode } from "../helpers/index.js";
 import Confirmotp from "../models/Confirmotp.js";
-
+import jwt from "jsonwebtoken";
 // Signup
 export const signup = async (req, res) => {
   let { username, first_name, last_name, password, country, gender, email } =
@@ -96,33 +96,44 @@ export const verifyUser = async (req, res) => {
 
 // Signin
 export const signin = async (req, res) => {
-  console.log("Signin" + req.body.username);
   const { username, email, password } = req.body;
-  const user = await User.findOne({ username });
-
+  const user = await User.findOne({ username: username });
+  let userpassword;
+  let token;
   try {
     if (!user) {
-      const uemail = await User.findOne({ email });
+      const uemail = await User.findOne({ email: username });
       if (!uemail) {
-        throw Error("invalid user");
+        throw Error("User does not exist");
       }
     }
-    if (user) {
-      const userpassword = user.password;
-      const iscorrectpassword = await bcrypt.compare(password, userpassword);
-      if (!iscorrectpassword) {
-        throw Error("Incorrect Password");
-      }
+    const uemail = await User.findOne({ email: username });
+    userpassword = !user ? uemail.password : user.password;
+    const iscorrectpassword = await bcrypt.compare(password, userpassword);
+    if (!iscorrectpassword) {
+      throw Error("Incorrect Password");
     }
+    let id = user ? user._id : uemail._id;
+    token = jwt.sign({ id }, process.env.SECRET);
     res.status(200).json({
       status: "success",
-      maessage: "Logged In Sucessfully",
-      user: JSON.stringify(user),
+      message: "Logged In Sucessfully",
+      user: {
+        _id: user ? user._id : uemail._id,
+        username: user ? user.username : uemail.username,
+        email: user ? user.email : uemail.email,
+        verified: user ? user.verified : uemail.verified,
+        first_name: user ? user.first_name : uemail.first_name,
+        last_name: user ? user.last_name : uemail.last_name,
+        gender: user ? user.gender : uemail.gender,
+        country: user ? user.country : uemail.country,
+      },
+      token: token,
     });
   } catch (error) {
     res.status(401).json({
       status: "error",
-      maessage: error.message,
+      message: error.message,
     });
   }
 };
