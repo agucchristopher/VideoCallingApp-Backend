@@ -7,15 +7,20 @@ export const checkSignup = (req, res, next) => {
       (!username, !first_name, !last_name, !password, !country, !gender, !email)
     ) {
       throw Error("Required Fields Are Empty!");
+    } else {
+      if (!validator.isEmail(email.toLowerCase())) {
+        throw Error("Invalid Email");
+      }
+      else {
+        next();
+      }
     }
-    if (!validator.isEmail(email.toLowerCase())) {
-      throw Error("Invalid Email");
-    }
+   
   } catch (error) {
-    res.status(409).json({ message: error.message });
+    res.status(409).json({ message: error.message, status: "error" });
   }
 
-  next();
+  
 };
 export const generateotpcode = () => {
   let token = Math.floor(Math.random() * 10000);

@@ -1,12 +1,12 @@
 import express from "express";
 import mongoose from "mongoose";
-import twilio from "twilio";
 import User from "../models/User.js";
 import bcrypt from "bcrypt";
 import verifyEmail from "../models/VerifyEmail.js";
 import { generateotpcode } from "../helpers/index.js";
 import Confirmotp from "../models/Confirmotp.js";
 import jwt from "jsonwebtoken";
+
 // Signup
 export const signup = async (req, res) => {
   let { username, first_name, last_name, password, country, gender, email } =
@@ -17,8 +17,11 @@ export const signup = async (req, res) => {
   let profilePic;
   if (gender == "male") {
     profilePic = "link to male avatar";
+  }
+  if (gender == "female") {
+    profilePic = "link to female avatar";
   } else {
-    profilePic = "link to Female avatar";
+    profilePic = "link to bot avatar";
   }
   let token = generateotpcode();
   console.log(token);

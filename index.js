@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
-import { twilio, users } from "./routes/index.js";
-import ngrok from "ngrok";
+import { users } from "./routes/index.js";
+// import ngrok from "ngrok";
 import mongoose from "mongoose";
 import User from "./models/User.js";
 
@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use("/users", users);
-app.use("/twilio", twilio);
+// app.use("/twilio", twilio);
 
 app.listen(PORT, () => {
   console.log(`Server Running on port ${PORT}`);
@@ -30,6 +30,3 @@ const client = mongoose.connect(
     err ? console.log(err.message) : console.log("Connected to database")
 );
 mongoose.set("strictQuery", true);
-// ngrok.connect(process.env.PORT).then((url) => {
-//   console.log(`Server forwarded to public url ${url}`);
-// });
