@@ -1,5 +1,3 @@
-import express from "express";
-import mongoose from "mongoose";
 import User from "../models/User.js";
 import bcrypt from "bcrypt";
 import verifyEmail from "../models/VerifyEmail.js";
@@ -142,9 +140,14 @@ export const signin = async (req, res) => {
 };
 // Generate OTP
 export const generateotp = async (req, res) => {
-  const { id } = req.body;
-  const _id = id;
+  const { email } = req.body;
+
   try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw Error("Invalid Email Addres");
+    }
+    const _id = user._id;
     const resettoken = await Confirmotp.findOneAndDelete({ owner: _id });
     if (resettoken) {
     }
@@ -156,11 +159,11 @@ export const generateotp = async (req, res) => {
     if (!userexists) {
       throw Error("invalid user");
     }
-    const reset = new Confirmotp({ owner: id, token: `${otp}` });
+    const reset = new Confirmotp({ owner: _id, token: `${otp}` });
     await reset.save();
     res.status(200).json({
       status: "success",
-      message: "We Sent You A Code at test@gmail.com",
+      message: `Code have been sent successfully`,
     });
   } catch (error) {
     res.status(400).json({ status: "error", message: error.message });
@@ -171,15 +174,18 @@ export const generateotp = async (req, res) => {
 // Confirm OTP
 export const verifyotp = async (req, res) => {
   try {
-    const { token, id } = req.body;
-    const _id = id;
-    const usertoken = await User.findOne({ _id });
-    if (!usertoken) {
-      throw Error("Invalid User");
+    const { token, email } = req.body;
+
+    const user = await User.findOne({ email: email });
+    if (!user) {
+      throw Error("Something went wrong, please try again!");
     }
+    const _id = user._id;
+    console.log(user);
+
     const resettoken = await Confirmotp.findOne({ owner: _id });
     if (!resettoken) {
-      throw Error("Invalid Token");
+      throw Error("Something went wrong, please try again!");
     }
     let utoken = `${resettoken.token}`;
     utoken.trim();
@@ -187,7 +193,7 @@ export const verifyotp = async (req, res) => {
     const correct = await bcrypt.compare(`${token}`, `${utoken}`);
     console.log(`${token}`, `${utoken}`);
     if (!correct) {
-      throw Error("Token does not match");
+      throw Error("Invalid Code, please try again!");
     } else {
       const deletetoken = Confirmotp.findOneAndDelete({ owner: _id });
       await deletetoken;

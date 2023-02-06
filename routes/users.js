@@ -10,6 +10,7 @@ import {
 import { checkSignup } from "../helpers/index.js";
 
 const users = express.Router();
+
 users.post("/signup", checkSignup, signup);
 users.post("/signin", signin);
 users.post("/verifyotp", verifyotp);
