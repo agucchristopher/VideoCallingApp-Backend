@@ -1,9 +1,10 @@
 import User from "../models/User.js";
 import bcrypt from "bcrypt";
 import verifyEmail from "../models/VerifyEmail.js";
-import { generateotpcode } from "../helpers/index.js";
+import { emailTemplate, generateotpcode } from "../helpers/index.js";
 import Confirmotp from "../models/Confirmotp.js";
 import jwt from "jsonwebtoken";
+import { transporter } from "../config/index.js";
 
 // Signup
 export const signup = async (req, res) => {
@@ -63,29 +64,31 @@ export const signup = async (req, res) => {
 };
 // Verify User
 export const verifyUser = async (req, res) => {
-  const { token, id, email } = req.body;
-  const _id = id;
+  const { token, email } = req.body;
+
   try {
-    const userexists = await User.findOne({ _id });
+    const userexists = await User.findOne({ email });
+
     if (!userexists) {
       throw Error("invalid user");
     }
-    const usertoken = await verifyEmail.findOne({ owner: id });
+    const _id = userexists._id;
+    const usertoken = await verifyEmail.findOne({ owner: _id });
     if (!usertoken) {
-      throw Error("User have already been verified!");
+      throw Error("Yo have already been verified!");
     }
     const correct = await bcrypt.compare(token, `${usertoken.token}`);
     if (!correct) {
       throw Error("invalid token");
     }
-    const verify = verifyEmail.findOneAndDelete({ owner: id });
-    const user = User.findOneAndUpdate({ id });
+    const verify = verifyEmail.findOneAndDelete({ owner: _id });
+    const user = User.findOneAndUpdate({ _id });
     user.update({ verified: "true" });
     await verify;
     await user;
     res.status(200).json({
       status: "success",
-      message: "User have been verified succesfully",
+      message: "Your have been verified succesfully",
     });
   } catch (error) {
     res.status(401).json({
@@ -97,7 +100,7 @@ export const verifyUser = async (req, res) => {
 
 // Signin
 export const signin = async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, password } = req.body;
   const user = await User.findOne({ username: username });
   let userpassword;
   let token;
@@ -153,6 +156,14 @@ export const generateotp = async (req, res) => {
     }
     let otp = generateotpcode();
     console.log(otp);
+    await transporter.sendMail({
+      from: `"Anonymous" <security@gmail.com>`, // sender address
+      to: email, // list of receivers
+      subject: `Hello ${user.username}, ${otp} is your otp code`, // Subject line
+      // text: , // plain text body
+      html: emailTemplate(`@${user.username}`, otp, user.email), // html body
+    });
+
     const hash = await bcrypt.hash(`${otp}`, 8);
     otp = hash;
     const userexists = await User.findOne({ _id });
@@ -199,7 +210,7 @@ export const verifyotp = async (req, res) => {
       await deletetoken;
       res.status(200).json({
         status: "success",
-        message: "Token have been confirmed",
+        message: "Code",
       });
     }
   } catch (error) {
@@ -219,16 +230,16 @@ export const updatePassword = async (req, res) => {
   try {
     const userexists = await User.findOne({ _id });
     if (!userexists) {
-      throw Error("invalid user");
+      throw Error("Something went wrong, please try again!");
     }
     const usertoken = await Confirmotp.findOne({ owner: _id });
-    if (usertoken) {
-      throw Error("Invalid Request");
+    if (!usertoken) {
+      throw Error("Something went wrong, please try again!");
     }
     const exists = await bcrypt.compare(rawpass, `${userexists.password}`);
     console.warn("exists", exists, usertoken);
     if (exists) {
-      throw Error("Your New Password Must be different from the old one");
+      throw Error("Your new password must be different from the old one");
     }
 
     const user = User.findOneAndUpdate({ _id });
@@ -236,7 +247,7 @@ export const updatePassword = async (req, res) => {
     await user;
     res.status(200).json({
       status: "success",
-      message: "User password have been updated succesfully",
+      message: "Your password have been updated succesfully",
     });
   } catch (error) {
     res.status(401).json({
