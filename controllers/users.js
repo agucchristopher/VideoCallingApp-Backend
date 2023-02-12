@@ -156,13 +156,13 @@ export const generateotp = async (req, res) => {
     }
     let otp = generateotpcode();
     console.log(otp);
-    await transporter.sendMail({
-      from: `"Anonymous" <security@gmail.com>`, // sender address
-      to: email, // list of receivers
-      subject: `Hello ${user.username}, ${otp} is your otp code`, // Subject line
-      // text: , // plain text body
-      html: emailTemplate(`@${user.username}`, otp, user.email), // html body
-    });
+    // await transporter.sendMail({
+    //   from: `"Anonymous" <security@gmail.com>`, // sender address
+    //   to: email, // list of receivers
+    //   subject: `Hello ${user.username}, ${otp} is your otp code`, // Subject line
+    //   // text: , // plain text body
+    //   html: emailTemplate(`@${user.username}`, otp, user.email), // html body
+    // });
 
     const hash = await bcrypt.hash(`${otp}`, 8);
     otp = hash;
@@ -192,15 +192,12 @@ export const verifyotp = async (req, res) => {
       throw Error("Something went wrong, please try again!");
     }
     const _id = user._id;
-    console.log(user);
-
     const resettoken = await Confirmotp.findOne({ owner: _id });
     if (!resettoken) {
       throw Error("Something went wrong, please try again!");
     }
     let utoken = `${resettoken.token}`;
-    utoken.trim();
-    token.trim();
+
     const correct = await bcrypt.compare(`${token}`, `${utoken}`);
     console.log(`${token}`, `${utoken}`);
     if (!correct) {
@@ -210,7 +207,7 @@ export const verifyotp = async (req, res) => {
       await deletetoken;
       res.status(200).json({
         status: "success",
-        message: "Code",
+        message: "Email was verified successfully",
       });
     }
   } catch (error) {
